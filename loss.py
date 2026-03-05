@@ -1,0 +1,1 @@
+# File untuk menghitung loss function
