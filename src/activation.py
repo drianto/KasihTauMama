@@ -2,12 +2,15 @@
 import numpy as np
 
 class Activation:
+    # Fungsi aktivasi biasa buat forward prop
     def forward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
 
+    # Fungsi aktivasi turunan buat backward prop
     def backward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
+
 
 class Linear(Activation):
     def forward(self, x: np.ndarray) -> np.ndarray:
@@ -26,6 +29,7 @@ class ReLU(Activation):
     def backward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
+
 class Sigmoid(Activation):
     def forward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
@@ -34,6 +38,7 @@ class Sigmoid(Activation):
     def backward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
+
 class HyperbolicTangent(Activation):
     def forward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
@@ -41,6 +46,7 @@ class HyperbolicTangent(Activation):
 
     def backward(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError
+
 
 class Softmax(Activation):
     def forward(self, x: np.ndarray) -> np.ndarray:
