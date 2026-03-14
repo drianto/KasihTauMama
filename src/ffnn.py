@@ -1,6 +1,15 @@
+from typing import Callable
 import numpy as np
+
+class Links:
+    def __init__(self) -> None:
+        self.weight: np.ndarray =
+        self.bias: np.ndarray
+        
+
+
 class FFNN:
-    def __init__(self, loss: str, n_hidden_layer: int, activation: str, batch: int, learning_rate: float) -> None:
+    def __init__(self, loss: Callable, n_hidden_layer: int, activation: Callable, batch: int, learning_rate: float) -> None:
         self.loss = loss
         self.n_hidden_layer = n_hidden_layer
         self.activation = activation
