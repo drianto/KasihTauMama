@@ -94,6 +94,9 @@ class FFNN:
     def __init__(self, loss: Loss, layers: list[int], activation: Activation, link_verbose: bool, init_method: str, **kwargs) -> None:
         self.loss = loss
 
+        layer_count = len(layers)
+        if layer_count < 2:
+            raise ValueError(f"FFNN membutuhkan setidaknya 2 layer, layer count: {layer_count}")
         self.links = []
         for i in range(len(layers) - 1):
             link = Links(
@@ -108,6 +111,16 @@ class FFNN:
 
 
     def fit(self, X: np.ndarray, y: np.ndarray, epochs: int, learning_rate: float, batch_size: int, verbose=1) -> None:
+        if X.shape[1] != self.links[0].weight.shape[0]:
+            raise ValueError(
+                f"Jumlah fitur: {X.shape[1]} tidak sesuai dengan jumlah neuron layer pertama: {self.links[0].weight.shape[0]}"
+            )
+
+        if y.shape[1] != self.links[-1].weight.shape[1]:
+            raise ValueError(
+                f"Jumlah target fitur: {y.shape[1]} tidak sesuai dengan jumlah neuron output layer terakhir: {self.links[-1].weight.shape[1]}"
+            )
+
         history = {
             "train_loss": [],
             "val_loss": []
@@ -177,6 +190,44 @@ class FFNN:
 
 def main():
     print("Hello from kasihtaumama!")
+
+    class DummyActivation(Activation):
+        def forward(self, x): return x
+        def backward(self, x): return np.ones_like(x)
+
+    class DummyLoss(Loss):
+        def forward(self, y_pred, y_true):
+            return np.mean((y_pred - y_true)**2)
+        def backward(self, y_pred, y_true):
+            return 2 * (y_pred - y_true) / y_true.shape[0]
+
+    # Dummy dataset
+    X = np.random.rand(100, 3)  # 100 samples, 3 features
+    y = np.random.rand(100, 1)  # 100 targets, 1 output
+
+    model = FFNN(
+        loss=DummyLoss(),
+        layers=[3, 5, 4, 1],
+        activation=DummyActivation(),
+        link_verbose=False,
+        init_method='uniform',
+        lower=-0.1,
+        upper=0.1,
+        seed=42
+    )
+
+    # Train
+    model.fit(X, y, epochs=5, learning_rate=0.01, batch_size=10, verbose=1)
+
+    # Predict
+    y_pred = model.predict(X[:5])
+    print("Sample predictions:\n", y_pred)
+
+    # Save and Load
+    # model.save("test_model.pkl")
+    # loaded_model = FFNN.load("test_model.pkl")
+    # y_pred_loaded = loaded_model.predict(X[:5])
+    # print("Predictions from loaded model:\n", y_pred_loaded)
 
 
 if __name__ == "__main__":
