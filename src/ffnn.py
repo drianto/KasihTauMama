@@ -2,6 +2,7 @@ from activation import Activation
 from loss import Loss
 
 import numpy as np
+import pickle
 
 class Links:
     def __init__(
@@ -80,12 +81,14 @@ class FFNN:
 
 
     def save(self, path) -> None:
-        pass
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
 
 
     @staticmethod
-    def load(path):
-        pass
+    def load(path) -> FFNN:
+        with open(path, "rb") as f:
+            return pickle.load(f)
 
 
 def main():
