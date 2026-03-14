@@ -1,4 +1,5 @@
 from activation import Activation
+from loss import Loss
 
 import numpy as np
 
@@ -53,19 +54,39 @@ class Links:
         pass
 
 
+    def show_weight_distribution(self) -> None:
+        pass
+
+
+    def show_dw_distribution(self) -> None:
+        pass
+
+
 class FFNN:
-    def __init__(self, loss, n_hidden_layer: int, activation: Activation, batch: int, learning_rate: float) -> None:
+    def __init__(self, loss: Loss, n_hidden_layer: int, activation: Activation, batch: int, learning_rate: float) -> None:
         self.loss = loss
         self.n_hidden_layer = n_hidden_layer
         self.activation = activation
         self.batch = batch
         self.learning_rate = learning_rate
 
+
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         pass
 
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         pass
+
+
+    def save(self, path) -> None:
+        pass
+
+
+    @staticmethod
+    def load(path):
+        pass
+
 
 def main():
     print("Hello from kasihtaumama!")
