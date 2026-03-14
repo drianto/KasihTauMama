@@ -91,20 +91,49 @@ class Links:
 
 
 class FFNN:
-    def __init__(self, loss: Loss, n_hidden_layer: int, activation: Activation, batch: int, learning_rate: float) -> None:
+    def __init__(self, loss: Loss, layers: list[int], activation: Activation, link_verbose: bool, init_method: str, **kwargs) -> None:
         self.loss = loss
-        self.n_hidden_layer = n_hidden_layer
-        self.activation = activation
-        self.batch = batch
-        self.learning_rate = learning_rate
+
+        self.links = []
+        for i in range(len(layers) - 1):
+            link = Links(
+                left_n_neuron=layers[i],
+                right_n_neuron=layers[i + 1],
+                activation_func=activation,
+                verbose=link_verbose,
+                init_method=init_method,
+                **kwargs
+            )
+            self.links.append(link)
 
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
-        pass
+    def fit(self, X: np.ndarray, y: np.ndarray, epochs: int, learning_rate: float, batch_size: int, verbose=1) -> None:
+        history = {
+            "train_loss": [],
+            "val_loss": []
+        }
+        loss = 0
+        for epoch in range(epochs):
+            for i in range(0, len(X), batch_size):
+                xb = X[i:i+batch_size]
+                yb = y[i:i+batch_size]
+
+                y_pred = self.forward(xb)
+
+                loss = self.loss.forward(y_pred, yb)
+
+                self.backward(y_pred, yb)
+
+                self.update_weight(learning_rate)
+
+            history["train_loss"].append(loss)
+
+            if verbose == 1:
+                print(f"Epoch {epoch} | Loss {loss}")
 
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        pass
+        return self.forward(X)
 
 
     def save(self, path) -> None:
@@ -116,6 +145,34 @@ class FFNN:
     def load(path) -> FFNN:
         with open(path, "rb") as f:
             return pickle.load(f)
+
+
+    def forward(self, x):
+        for link in self.links:
+            x = link.forward(x)
+
+        return x
+
+
+    def backward(self, y_pred, y_true):
+        gradient = self.loss.backward(y_pred, y_true)
+        for link in reversed(self.links):
+            gradient = link.backward(gradient)
+
+
+    def update_weight(self, learning_rate: float, l1=0, l2=0):
+        for link in self.links:
+            self.apply_regularization(link, l1, l2)
+            link.weight -= learning_rate * link.dw
+            link.bias -= learning_rate * link.db
+
+
+    def apply_regularization(self, layer, l1=0, l2=0):
+        if l1 > 0:
+            layer.dw += l1 * np.sign(layer.weight)
+
+        if l2 > 0:
+            layer.dw += 2 * l2 * layer.weight
 
 
 def main():
