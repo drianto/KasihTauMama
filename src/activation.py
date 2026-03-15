@@ -1,17 +1,57 @@
 # File untuk menyimpan perhitungan fungsi aktivasi
 import numpy as np
 
-def linear(x):
-    return np.x
+class Activation:
+    # Fungsi aktivasi biasa buat forward prop
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
 
-def relu(x):
-    return max(0, np.x)
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    # Fungsi aktivasi turunan buat backward prop
+    def backward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
 
-def hyperbolic_tangent(x):
-    return np.tanh(x)
 
-def softmax(x):
-    return np.exp(x) / np.exp(x).sum()
+class Linear(Activation):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+    def backward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+class ReLU(Activation):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+    def backward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+class Sigmoid(Activation):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+    def backward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+class HyperbolicTangent(Activation):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+    def backward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+class Softmax(Activation):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+    def backward(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
