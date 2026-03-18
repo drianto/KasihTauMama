@@ -170,6 +170,14 @@ class FFNN:
                 self.backward(y_pred, yb)
                 self.update_weight(learning_rate, l1, l2)
 
+                if verbose == 1:
+                    progress = (b_idx + 1) / total_batches
+                    bar_len = 30
+                    filled_len = int(bar_len * progress)
+                    bar = '=' * filled_len + '.' * (bar_len - filled_len)
+                    sys.stdout.write(f"\rEpoch {epoch + 1}/{epochs} [{bar}] {int(progress * 100)}%")
+                    sys.stdout.flush()
+
             train_loss = np.mean(loss_list)
             history["train_loss"].append(train_loss)
 
@@ -180,10 +188,10 @@ class FFNN:
                 history["val_loss"].append(val_loss)
 
             if verbose == 1:
+                msg = f" - loss: {train_loss:.4f}"
                 if val_loss is not None:
-                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}")
-                else:
-                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f}")
+                    msg += f" - val_loss: {val_loss:.4f}"
+                print(msg)
         
         return history
 
