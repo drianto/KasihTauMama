@@ -156,24 +156,36 @@ class FFNN:
             "train_loss": [],
             "val_loss": []
         }
-        loss = 0
+        
         for epoch in range(epochs):
+            loss_list = []
             for i in range(0, len(X), batch_size):
                 xb = X[i:i+batch_size]
                 yb = y[i:i+batch_size]
 
                 y_pred = self.forward(xb)
-
-                loss = self.loss.forward(y_pred, yb)
+                batch_loss = self.loss.forward(y_pred, yb)
+                loss_list.append(batch_loss)
 
                 self.backward(y_pred, yb)
+                self.update_weight(learning_rate, l1, l2)
 
-                self.update_weight(learning_rate)
+            train_loss = np.mean(loss_list)
+            history["train_loss"].append(train_loss)
 
-            history["train_loss"].append(loss)
+            val_loss = None
+            if X_val is not None and y_val is not None:
+                y_val_pred = self.forward(X_val)
+                val_loss = self.loss.forward(y_val_pred, y_val)
+                history["val_loss"].append(val_loss)
 
             if verbose == 1:
-                print(f"Epoch {epoch} | Loss {loss}")
+                if val_loss is not None:
+                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}")
+                else:
+                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f}")
+        
+        return history
 
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -280,7 +292,13 @@ def main():
     )
 
     # Train
-    model.fit(X, y, epochs=5, learning_rate=0.01, batch_size=10, verbose=1)
+    history = model.fit(X, y, epochs=5, learning_rate=0.01, batch_size=10, verbose=1, l1=0.001, l2=0.001)
+
+    model.show_weight_distribution(layers=[0, 1])
+    model.show_dw_distribution(layers=[0, 1])
+
+    model.add_link(1, 10, DummyActivation())
+    model.remove_link(1)
 
     # Predict
     y_pred = model.predict(X[:5])
