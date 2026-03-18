@@ -5,6 +5,8 @@ from loss import Loss
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+import copy
+import sys
 
 class Links:
     def __init__(
@@ -77,7 +79,7 @@ class Links:
         if self.left_layer is None:
             raise ValueError("Forward propagation belum dilakukan, left layer is None")
 
-        gradient_activation = gradient_output * self.activation.backward(self.weighted_sum)
+        gradient_activation = self.activation.backward(gradient_output)
         batch_size = self.left_layer.shape[0]
         self.dw = self.left_layer.T @ gradient_activation / batch_size
         self.db = np.sum(gradient_activation, axis=0) / batch_size
@@ -85,7 +87,7 @@ class Links:
 
 
 class FFNN:
-    def __init__(self, loss: Loss, layers: list[int], activation: Activation, link_verbose: bool, init_method: str, **kwargs) -> None:
+    def __init__(self, loss: Loss, layers: list[int], activation: Activation | list[Activation], link_verbose: bool, init_method: str, **kwargs) -> None:
         self.loss = loss
         self.link_verbose = link_verbose
         self.init_method = init_method
@@ -94,12 +96,20 @@ class FFNN:
         layer_count = len(layers)
         if layer_count < 2:
             raise ValueError(f"FFNN membutuhkan setidaknya 2 layer, layer count: {layer_count}")
+        
+        if isinstance(activation, list):
+            if len(activation) != layer_count - 1:
+                raise ValueError("Jumlah fungsi aktivasi di list harus sama dengan jumlah layer link (n_layers - 1).")
+            activations = activation
+        else:
+            activations = [copy.deepcopy(activation) for _ in range(layer_count - 1)]
+
         self.links = []
         for i in range(len(layers) - 1):
             link = Links(
                 left_n_neuron=layers[i],
                 right_n_neuron=layers[i + 1],
-                activation_func=activation,
+                activation_func=activations[i],
                 verbose=link_verbose,
                 init_method=init_method,
                 **kwargs
@@ -113,7 +123,7 @@ class FFNN:
             raise IndexError("Posisi di luar jangkauan")
         
         left_n = self.links[0].weight.shape[0] if position == 0 else self.links[position - 1].weight.shape[1]
-        right_n = self.links[-1].weight.shape[1] if position == len(self.links) else self.links[position].weight.shape[0]
+        right_n = self.links[-1].weight.shape[1] if position == len(self.links) else self.links[position].weight.shape[1]
 
         new_link = Links(left_n, n_neuron, activation, self.link_verbose, self.init_method, **self.init_kwargs)
 
@@ -159,7 +169,9 @@ class FFNN:
         
         for epoch in range(epochs):
             loss_list = []
-            for i in range(0, len(X), batch_size):
+            total_batches = int(np.ceil(len(X) / batch_size))
+            
+            for b_idx, i in enumerate(range(0, len(X), batch_size)):
                 xb = X[i:i+batch_size]
                 yb = y[i:i+batch_size]
 
@@ -169,6 +181,14 @@ class FFNN:
 
                 self.backward(y_pred, yb)
                 self.update_weight(learning_rate, l1, l2)
+
+                if verbose == 1:
+                    progress = (b_idx + 1) / total_batches
+                    bar_len = 30
+                    filled_len = int(bar_len * progress)
+                    bar = '=' * filled_len + '.' * (bar_len - filled_len)
+                    sys.stdout.write(f"\rEpoch {epoch + 1}/{epochs} [{bar}] {int(progress * 100)}%")
+                    sys.stdout.flush()
 
             train_loss = np.mean(loss_list)
             history["train_loss"].append(train_loss)
@@ -180,10 +200,10 @@ class FFNN:
                 history["val_loss"].append(val_loss)
 
             if verbose == 1:
+                msg = f" - loss: {train_loss:.4f}"
                 if val_loss is not None:
-                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}")
-                else:
-                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f}")
+                    msg += f" - val_loss: {val_loss:.4f}"
+                print(msg)
         
         return history
 
