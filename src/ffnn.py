@@ -1,8 +1,10 @@
+from __future__ import annotations
 from activation import Activation
 from loss import Loss
 
 import numpy as np
 import pickle
+import matplotlib.pyplot as plt
 
 class Links:
     def __init__(
@@ -82,17 +84,12 @@ class Links:
         return gradient_activation @ self.weight.T
 
 
-    def show_weight_distribution(self) -> None:
-        pass
-
-
-    def show_dw_distribution(self) -> None:
-        pass
-
-
 class FFNN:
     def __init__(self, loss: Loss, layers: list[int], activation: Activation, link_verbose: bool, init_method: str, **kwargs) -> None:
         self.loss = loss
+        self.link_verbose = link_verbose
+        self.init_method = init_method
+        self.init_kwargs = kwargs
 
         layer_count = len(layers)
         if layer_count < 2:
@@ -110,7 +107,41 @@ class FFNN:
             self.links.append(link)
 
 
-    def fit(self, X: np.ndarray, y: np.ndarray, epochs: int, learning_rate: float, batch_size: int, verbose=1) -> None:
+    def add_link(self, position: int, n_neuron: int, activation: Activation) -> None:
+        """Menambah layer pada indeks posisi tertentu."""
+        if position < 0 or position > len(self.links):
+            raise IndexError("Posisi di luar jangkauan")
+        
+        left_n = self.links[0].weight.shape[0] if position == 0 else self.links[position - 1].weight.shape[1]
+        right_n = self.links[-1].weight.shape[1] if position == len(self.links) else self.links[position].weight.shape[0]
+
+        new_link = Links(left_n, n_neuron, activation, self.link_verbose, self.init_method, **self.init_kwargs)
+
+        if position < len(self.links):
+            old_link = self.links[position]
+            adjusted = Links(n_neuron, right_n, old_link.activation, self.link_verbose, self.init_method, **self.init_kwargs)
+            self.links[position] = adjusted
+
+        self.links.insert(position, new_link)
+
+
+    def remove_link(self, position: int) -> None:
+        """Menghapus layer pada indeks posisi tertentu."""
+        if len(self.links) <= 1:
+            raise ValueError("Tidak bisa menghapus link, FFNN minimal 1 link.")
+        if position < 0 or position >= len(self.links):
+            raise IndexError("Posisi di luar jangkauan")
+
+        self.links.pop(position)
+        if position < len(self.links):
+            left_n = self.links[position - 1].weight.shape[1] if position > 0 else self.links[0].weight.shape[0]
+            right_n = self.links[position].weight.shape[1]
+            old_act = self.links[position].activation
+            adjusted = Links(left_n, right_n, old_act, self.link_verbose, self.init_method, **self.init_kwargs)
+            self.links[position] = adjusted
+
+
+    def fit(self, X: np.ndarray, y: np.ndarray, epochs: int, learning_rate: float, batch_size: int, verbose=1, X_val=None, y_val=None, l1=0.0, l2=0.0) -> dict:
         if X.shape[1] != self.links[0].weight.shape[0]:
             raise ValueError(
                 f"Jumlah fitur: {X.shape[1]} tidak sesuai dengan jumlah neuron layer pertama: {self.links[0].weight.shape[0]}"
@@ -125,24 +156,36 @@ class FFNN:
             "train_loss": [],
             "val_loss": []
         }
-        loss = 0
+        
         for epoch in range(epochs):
+            loss_list = []
             for i in range(0, len(X), batch_size):
                 xb = X[i:i+batch_size]
                 yb = y[i:i+batch_size]
 
                 y_pred = self.forward(xb)
-
-                loss = self.loss.forward(y_pred, yb)
+                batch_loss = self.loss.forward(y_pred, yb)
+                loss_list.append(batch_loss)
 
                 self.backward(y_pred, yb)
+                self.update_weight(learning_rate, l1, l2)
 
-                self.update_weight(learning_rate)
+            train_loss = np.mean(loss_list)
+            history["train_loss"].append(train_loss)
 
-            history["train_loss"].append(loss)
+            val_loss = None
+            if X_val is not None and y_val is not None:
+                y_val_pred = self.forward(X_val)
+                val_loss = self.loss.forward(y_val_pred, y_val)
+                history["val_loss"].append(val_loss)
 
             if verbose == 1:
-                print(f"Epoch {epoch} | Loss {loss}")
+                if val_loss is not None:
+                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}")
+                else:
+                    print(f"Epoch {epoch + 1}/{epochs} | Training Loss: {train_loss:.4f}")
+        
+        return history
 
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -188,6 +231,38 @@ class FFNN:
             layer.dw += 2 * l2 * layer.weight
 
 
+    def show_weight_distribution(self, layers: list[int]) -> None:
+        """Plot distribusi bobot dan bias pada layer tertentu."""
+        fig, axes = plt.subplots(len(layers), 2, figsize=(10, 4 * len(layers)))
+        if len(layers) == 1: axes = np.array([axes])
+
+        for idx, (ax_w, ax_b), l_idx in zip(range(len(layers)), axes, layers):
+            if 0 <= l_idx < len(self.links):
+                ax_w.hist(self.links[l_idx].weight.flatten(), bins=30, color='blue', alpha=0.7)
+                ax_w.set_title(f"Layer {l_idx} Weight")
+                ax_b.hist(self.links[l_idx].bias.flatten(), bins=30, color='red', alpha=0.7)
+                ax_b.set_title(f"Layer {l_idx} Bias")
+        plt.tight_layout()
+        plt.show()
+
+
+    def show_dw_distribution(self, layers: list[int]) -> None:
+        """Plot distribusi gradien bobot dan bias pada layer tertentu."""
+        fig, axes = plt.subplots(len(layers), 2, figsize=(10, 4 * len(layers)))
+        if len(layers) == 1: axes = np.array([axes])
+
+        for idx, (ax_w, ax_b), l_idx in zip(range(len(layers)), axes, layers):
+            if 0 <= l_idx < len(self.links):
+                if self.links[l_idx].dw is not None:
+                    ax_w.hist(self.links[l_idx].dw.flatten(), bins=30, color='green', alpha=0.7)
+                ax_w.set_title(f"Layer {l_idx} dW")
+                if self.links[l_idx].db is not None:
+                    ax_b.hist(self.links[l_idx].db.flatten(), bins=30, color='orange', alpha=0.7)
+                ax_b.set_title(f"Layer {l_idx} dB")
+        plt.tight_layout()
+        plt.show()
+
+
 def main():
     print("Hello from kasihtaumama!")
 
@@ -217,7 +292,13 @@ def main():
     )
 
     # Train
-    model.fit(X, y, epochs=5, learning_rate=0.01, batch_size=10, verbose=1)
+    history = model.fit(X, y, epochs=5, learning_rate=0.01, batch_size=10, verbose=1, l1=0.001, l2=0.001)
+
+    model.show_weight_distribution(layers=[0, 1])
+    model.show_dw_distribution(layers=[0, 1])
+
+    model.add_link(1, 10, DummyActivation())
+    model.remove_link(1)
 
     # Predict
     y_pred = model.predict(X[:5])
