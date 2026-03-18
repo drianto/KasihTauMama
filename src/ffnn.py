@@ -219,6 +219,38 @@ class FFNN:
             layer.dw += 2 * l2 * layer.weight
 
 
+    def show_weight_distribution(self, layers: list[int]) -> None:
+        """Plot distribusi bobot dan bias pada layer tertentu."""
+        fig, axes = plt.subplots(len(layers), 2, figsize=(10, 4 * len(layers)))
+        if len(layers) == 1: axes = np.array([axes])
+
+        for idx, (ax_w, ax_b), l_idx in zip(range(len(layers)), axes, layers):
+            if 0 <= l_idx < len(self.links):
+                ax_w.hist(self.links[l_idx].weight.flatten(), bins=30, color='blue', alpha=0.7)
+                ax_w.set_title(f"Layer {l_idx} Weight")
+                ax_b.hist(self.links[l_idx].bias.flatten(), bins=30, color='red', alpha=0.7)
+                ax_b.set_title(f"Layer {l_idx} Bias")
+        plt.tight_layout()
+        plt.show()
+
+
+    def show_dw_distribution(self, layers: list[int]) -> None:
+        """Plot distribusi gradien bobot dan bias pada layer tertentu."""
+        fig, axes = plt.subplots(len(layers), 2, figsize=(10, 4 * len(layers)))
+        if len(layers) == 1: axes = np.array([axes])
+
+        for idx, (ax_w, ax_b), l_idx in zip(range(len(layers)), axes, layers):
+            if 0 <= l_idx < len(self.links):
+                if self.links[l_idx].dw is not None:
+                    ax_w.hist(self.links[l_idx].dw.flatten(), bins=30, color='green', alpha=0.7)
+                ax_w.set_title(f"Layer {l_idx} dW")
+                if self.links[l_idx].db is not None:
+                    ax_b.hist(self.links[l_idx].db.flatten(), bins=30, color='orange', alpha=0.7)
+                ax_b.set_title(f"Layer {l_idx} dB")
+        plt.tight_layout()
+        plt.show()
+
+
 def main():
     print("Hello from kasihtaumama!")
 
